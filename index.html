@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S'S DARK - ADMIN ACCESS</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@500;700&display=swap');
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #050505;
+            background-image: radial-gradient(circle at center, #111 0%, #000 100%);
+            color: #fff;
+            font-family: 'Rajdhani', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 400px;
+            background: rgba(15, 15, 15, 0.95);
+            border: 2px solid #222;
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        /* Neon Border */
+        .container::before {
+            content: '';
+            position: absolute;
+            top: -2px; left: -2px; right: -2px; bottom: -2px;
+            background: linear-gradient(45deg, #ff0000, #00ff00, #0000ff, #ff0000);
+            z-index: -1;
+            border-radius: 22px;
+            animation: borderRotate 5s linear infinite;
+            filter: blur(5px);
+        }
+
+        @keyframes borderRotate {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
+        }
+
+        h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #00ff88;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        input {
+            width: 100%;
+            background: #000;
+            border: 1px solid #444;
+            padding: 12px;
+            border-radius: 10px;
+            color: #fff;
+            font-family: 'Orbitron';
+            font-size: 16px;
+            text-align: center;
+            outline: none;
+            margin-bottom: 15px;
+        }
+
+        .btn-action {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Orbitron';
+            font-weight: bold;
+            cursor: pointer;
+            background: linear-gradient(135deg, #00ff88 0%, #0088ff 100%);
+            color: #000;
+            text-transform: uppercase;
+        }
+
+        /* Dashboard hidden by default */
+        #adminPanel { display: none; }
+
+        .status-bar {
+            background: #111;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #333;
+            color: #888;
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .control-btn {
+            padding: 18px;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Orbitron';
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        .btn-big { background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%); color: #000; }
+        .btn-small { background: linear-gradient(135deg, #ff007f 0%, #a30052 100%); color: #fff; }
+
+        #lastAction { margin-top: 15px; font-size: 11px; color: #555; }
+        
+        .forgot-pass {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<!-- LOGIN SECTION -->
+<div id="loginSection" class="container">
+    <h2>ADMIN LOGIN</h2>
+    <input type="password" id="passInput" placeholder="Enter Password">
+    <button class="btn-action" onclick="login()">LOGIN</button>
+    <div class="forgot-pass" onclick="alert('পাসওয়ার্ড ভুলে গেলে অ্যাডমিনের সাথে যোগাযোগ করুন।')">Forgot Password?</div>
+</div>
+
+<!-- ADMIN CONTROL SECTION -->
+<div id="adminPanel" class="container">
+    <h2>Admin Controller</h2>
+    
+    <div class="status-bar">
+        STATUS: <span id="dbStatus" style="color: #00ff88;">CONNECTED</span> | LIVE
+    </div>
+
+    <div style="text-align: left; margin-bottom: 15px;">
+        <label style="font-size: 12px; color: #aaa; margin-left: 5px;">PERIOD NUMBER</label>
+        <input type="number" id="periodInput" placeholder="Ex: 456" style="margin-bottom: 0;">
+    </div>
+
+    <div class="btn-grid">
+        <button class="control-btn btn-big" onclick="sendSignal('BIG 7,9', '#00d2ff')">BIG</button>
+        <button class="control-btn btn-small" onclick="sendSignal('SMALL 0,2', '#ff007f')">SMALL</button>
+    </div>
+
+    <div style="border-top: 1px solid #222; padding-top: 20px; text-align: left;">
+        <label style="font-size: 12px; color: #aaa; margin-left: 5px;">CUSTOM SIGNAL</label>
+        <input type="text" id="customInput" placeholder="Ex: BIG 5" style="margin-bottom: 10px;">
+        <button class="btn-action" style="background: #fff; color: #000;" onclick="sendCustom()">SEND CUSTOM</button>
+    </div>
+
+    <div id="lastAction">Last Sent: None</div>
+</div>
+
+<script>
+    // Firebase Config
+    const firebaseConfig = {
+        apiKey: "AIzaSyAyrZ0fFcj5Y5HtlKzGJIsBtC9UeGbSDtI",
+        authDomain: "signal-e5583.firebaseapp.com",
+        databaseURL: "https://signal-e5583-default-rtdb.firebaseio.com",
+        projectId: "signal-e5583",
+        storageBucket: "signal-e5583.firebasestorage.app",
+        messagingSenderId: "186804111926",
+        appId: "1:186804111926:web:020f7476c0a9fab2cf2697"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    // SIMPLE LOGIN FUNCTION
+    function login() {
+        const pass = document.getElementById("passInput").value;
+        if (pass === "support1234") {
+            document.getElementById("loginSection").style.display = "none";
+            document.getElementById("adminPanel").style.display = "block";
+        } else {
+            alert("ভুল পাসওয়ার্ড! আবার চেষ্টা করুন।");
+        }
+    }
+
+    // SIGNAL FUNCTIONS
+    function sendSignal(signalType, colorCode) {
+        const period = document.getElementById("periodInput").value;
+        if(!period) { alert("Period Number দিন!"); return; }
+
+        database.ref('liveControl').set({
+            signal: signalType,
+            color: colorCode,
+            period: period,
+            startTime: Date.now()
+        }).then(() => {
+            updateUI(signalType);
+            vibrateMobile();
+        });
+    }
+
+    function sendCustom() {
+        const customText = document.getElementById("customInput").value;
+        const period = document.getElementById("periodInput").value;
+        if(!customText || !period) { alert("সবগুলো ঘর পূরণ করুন!"); return; }
+
+        database.ref('liveControl').set({
+            signal: customText,
+            color: "#00ff88",
+            period: period,
+            startTime: Date.now()
+        }).then(() => {
+            updateUI(customText);
+            vibrateMobile();
+        });
+    }
+
+    function updateUI(msg) {
+        document.getElementById("lastAction").innerText = "Last Sent: " + msg + " (" + new Date().toLocaleTimeString() + ")";
+        const status = document.getElementById("dbStatus");
+        status.innerText = "SIGNAL SENT!";
+        status.style.color = "#fff";
+        setTimeout(() => {
+            status.innerText = "CONNECTED";
+            status.style.color = "#00ff88";
+        }, 2000);
+    }
+
+    function vibrateMobile() {
+        if (navigator.vibrate) navigator.vibrate(50);
+    }
+</script>
+
+</body>
+</html>
