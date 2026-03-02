@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>S'S DARK - MANUAL CONTROL</title>
+    <title>S'S DARK - CLEAN START</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -20,9 +20,9 @@
         iframe { width: 100%; height: 100%; border: none; }
         
         @keyframes rgb-border {
-            0% { border-color:#ff0000; }
-            50% { border-color:#00ff00; }
-            100% { border-color:#ff0000; }
+            0% { border-color:#ff0000; box-shadow: 0 0 5px #ff0000; }
+            50% { border-color:#00ff00; box-shadow: 0 0 5px #00ff00; }
+            100% { border-color:#ff0000; box-shadow: 0 0 5px #ff0000; }
         }
 
         .floating-box {
@@ -49,7 +49,7 @@
         #adminBox { top: 80px; right: 15px; width: 160px; border-color: #00ff88; }
 
         .result-box { background: rgba(255,255,255,0.05); border-radius: 8px; padding: 10px 0; margin: 5px 0; border: 1px solid #222; }
-        #signalText { font-family: 'Orbitron'; font-size: 13px; font-weight: bold; display: block; }
+        #signalText { font-family: 'Orbitron'; font-size: 14px; font-weight: bold; display: block; color: #666; }
         #timerText { font-size: 20px; color: #ffeb3b; font-weight: bold; font-family: 'Orbitron'; display: block; }
         #periodText { font-size: 10px; color: #aaa; font-weight: bold; }
 
@@ -86,6 +86,7 @@
     <div class="handle" ontouchstart="startDrag(event, 'userBox')">S'S DARK LIVE</div>
     <div id="periodText">PERIOD: ---</div>
     <div class="result-box">
+        <!-- একদম ক্লিন শুরু হবে -->
         <span id="signalText">WAITING</span>
         <span id="timerText">30s</span>
     </div>
@@ -109,10 +110,7 @@
         </div>
         <input type="text" id="customInput" placeholder="CUSTOM MSG">
         <button class="btn-action" onclick="sendCustom()">SEND CUSTOM</button>
-        
-        <!-- নতুন রিসেট বাটন -->
         <button class="btn-reset" onclick="sendReset()">RESET (WAITING)</button>
-        
         <button class="hide-btn" onclick="toggleView('adminBox', 'adminTrigger', false)">HIDE ADM</button>
     </div>
 </div>
@@ -121,6 +119,9 @@
 <div id="adminTrigger" class="mini-trigger" onclick="toggleView('adminBox', 'adminTrigger', true)">ADM</div>
 
 <script>
+    // পেজ লোড হওয়ার সময় রেকর্ড করে রাখা
+    const pageLoadTime = Date.now();
+
     const firebaseConfig = {
         apiKey: "AIzaSyAyrZ0fFcj5Y5HtlKzGJIsBtC9UeGbSDtI",
         authDomain: "signal-e5583.firebaseapp.com",
@@ -134,7 +135,7 @@
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
     
-    // --- 30S LOOP TIMER ---
+    // --- 30S LIFETIME LOOP TIMER ---
     function update30sTimer() {
         const nowSeconds = Math.floor(Date.now() / 1000);
         const remaining = 30 - (nowSeconds % 30); 
@@ -145,13 +146,28 @@
     // --- FIREBASE LISTENING ---
     database.ref('liveControl').on('value', (snapshot) => {
         const data = snapshot.val();
+        
+        // লজিক: যদি ডাটাবেসের টাইটেলটি পেজ লোড করার আগের হয়, তবে তা দেখাবে না
+        // অথবা যদি অ্যাডমিন নিজে থেকে রিসেট বাটন চাপে
         if(data) {
-            const signalElem = document.getElementById("signalText");
-            signalElem.innerText = data.signal;
-            signalElem.style.color = data.color;
-            document.getElementById("periodText").innerText = "PERIOD: " + data.period;
+            if (data.signal === "WAITING") {
+                showWaiting();
+                document.getElementById("periodText").innerText = "PERIOD: " + data.period;
+            } else if (data.timestamp > pageLoadTime) { 
+                // শুধুমাত্র পেজ ওপেন করার পরের নতুন সিগন্যাল দেখাবে
+                const signalElem = document.getElementById("signalText");
+                signalElem.innerText = data.signal;
+                signalElem.style.color = data.color;
+                document.getElementById("periodText").innerText = "PERIOD: " + data.period;
+            }
         }
     });
+
+    function showWaiting() {
+        const signalElem = document.getElementById("signalText");
+        signalElem.innerText = "WAITING";
+        signalElem.style.color = "#666";
+    }
 
     // --- ADMIN ACTIONS ---
     function login() {
@@ -164,23 +180,37 @@
     function sendSignal(sig, col) {
         const p = document.getElementById("periodInput").value;
         if(!p) return alert("Enter Period!");
-        database.ref('liveControl').set({ signal: sig, color: col, period: p });
+        database.ref('liveControl').set({ 
+            signal: sig, 
+            color: col, 
+            period: p,
+            timestamp: Date.now() // নতুন সিগন্যাল চিহ্নিত করতে টাইমস্ট্যাম্প
+        });
     }
 
     function sendCustom() {
         const c = document.getElementById("customInput").value;
         const p = document.getElementById("periodInput").value;
         if(!c || !p) return alert("Fill all!");
-        database.ref('liveControl').set({ signal: c, color: "#00ff88", period: p });
+        database.ref('liveControl').set({ 
+            signal: c, 
+            color: "#00ff88", 
+            period: p,
+            timestamp: Date.now() 
+        });
     }
 
-    // ওয়েটিং মোডে ফেরত নেওয়ার ফাংশন
     function sendReset() {
         const p = document.getElementById("periodInput").value || "---";
-        database.ref('liveControl').set({ signal: "WAITING", color: "#666", period: p });
+        database.ref('liveControl').set({ 
+            signal: "WAITING", 
+            color: "#666", 
+            period: p,
+            timestamp: Date.now() 
+        });
     }
 
-    // --- SMOOTH DRAG LOGIC ---
+    // --- ULTRA SMOOTH DRAG LOGIC (Translate3d) ---
     let activeBox = null;
     let currentX, currentY, initialX, initialY;
     let xOffsets = { userBox: 0, adminBox: 0 };
@@ -217,4 +247,4 @@
     }
 </script>
 </body>
-    </html>
+</html>
